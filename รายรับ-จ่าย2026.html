@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>รายรับ-รายจ่าย 2026</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+    header{background:linear-gradient(135deg,#1a1a2e,#0f3460);color:white;padding:28px 24px 20px;text-align:center}
+    header h1{font-size:1.7rem;font-weight:700}
+    header p{margin-top:6px;opacity:.7;font-size:.9rem}
+    .container{max-width:1100px;margin:0 auto;padding:20px 14px}
+
+    /* Tabs */
+    .tabs{display:flex;gap:4px;background:white;border-radius:12px;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:16px}
+    .tab-btn{flex:1;padding:9px 4px;border:none;background:transparent;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;color:#888;transition:.2s}
+    .tab-btn.active{background:#0f3460;color:white}
+    .panel{display:none}.panel.active{display:block}
+
+    /* Sync bar */
+    .sync-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:white;border-radius:12px;padding:11px 16px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .sync-bar span.label{font-size:.8rem;font-weight:700;color:#555}
+    .sync-bar span.hint{font-size:.74rem;color:#bbb;flex:1;min-width:140px}
+
+    /* Month pills */
+    .month-selector{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+    .month-pill{padding:7px 13px;border-radius:20px;border:2px solid #dde;background:white;cursor:pointer;font-size:.82rem;font-weight:600;color:#777;transition:.2s}
+    .month-pill.has-data{border-color:#22c55e;color:#16a34a}
+    .month-pill.active{background:#0f3460;color:white;border-color:#0f3460}
+    .month-pill.active.has-data{background:#16a34a;border-color:#16a34a}
+
+    /* Form card */
+    .form-card{background:white;border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:18px}
+    .form-card h2{font-size:1rem;font-weight:700;color:#0f3460;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #f0f0f0}
+
+    /* Exchange rate row */
+    .exrate{background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#0369a1;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .exrate input{width:58px;padding:3px 6px;border:1px solid #bce;border-radius:5px;font-size:.85rem}
+
+    /* Flight hours box */
+    .flight-box{background:#f0f4ff;border-radius:10px;padding:12px;margin-bottom:12px}
+    .section-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+    .section-label.inc{color:#166534}.section-label.exp{color:#c2410c}.section-label.flight{color:#4338ca}
+    .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .field label{display:block;font-size:.73rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#888;margin-bottom:4px}
+    .field input{width:100%;padding:6px 9px;border:2px solid #e8e8e8;border-radius:7px;font-size:.84rem;color:#1a1a2e;outline:none;transition:.2s}
+    .field input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .field .hint{font-size:.68rem;color:#aaa;margin-top:3px}
+    #flight-calc{background:white;border-radius:7px;padding:9px 13px;font-size:.8rem;color:#444;margin-top:10px;display:none}
+
+    /* Dynamic items — card grid */
+    .items-box{border-radius:10px;padding:12px;margin-bottom:10px}
+    .items-box.inc{background:#f0fdf4}
+    .items-box.exp{background:#fff7ed}
+    .items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+    .item-card{position:relative;background:white;border-radius:9px;padding:9px 10px 8px;border:1.5px solid #e8e8e8;transition:.15s}
+    .item-card:hover{border-color:#a5b4fc}
+    .item-card input.item-label{display:block;width:100%;border:none;outline:none;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#888;margin-bottom:5px;background:transparent;cursor:text;padding:0}
+    .item-card input.item-label:focus{color:#4338ca}
+    .item-card input.item-amount{display:block;width:100%;border:none;border-bottom:2px solid #e8e8e8;outline:none;font-size:.95rem;font-weight:600;color:#1a1a2e;background:transparent;padding:2px 0;transition:.15s}
+    .item-card input.item-amount:focus{border-bottom-color:#6366f1}
+    .item-card .del-btn{position:absolute;top:5px;right:5px;width:18px;height:18px;border:none;border-radius:4px;background:transparent;color:#ccc;font-size:.72rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s;padding:0}
+    .item-card:hover .del-btn{opacity:1}
+    .item-card .del-btn:hover{background:#fee2e2;color:#dc2626}
+    .add-btn{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border:1.5px dashed #ccc;border-radius:9px;background:transparent;cursor:pointer;font-size:.78rem;font-weight:600;color:#bbb;width:100%;transition:.2s;margin-top:4px}
+    .add-btn:hover{border-color:#6366f1;color:#6366f1}
+
+    /* Preview */
+    #calc-preview{margin-top:14px;padding:11px 16px;background:#f8faff;border-radius:10px;font-size:.85rem;display:none;flex-wrap:wrap;gap:10px}
+
+    /* Buttons */
+    .btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+    .btn{padding:10px 20px;border:none;border-radius:8px;font-size:.86rem;font-weight:700;cursor:pointer;transition:.2s}
+    .btn-primary{background:#0f3460;color:white}.btn-primary:hover{background:#16213e}
+    .btn-danger{background:#fee2e2;color:#dc2626}.btn-danger:hover{background:#fecaca}
+    .btn-export{background:#e0f2fe;color:#0369a1}.btn-import-label{background:#f0fdf4;color:#166534;border-radius:8px;padding:10px 20px;font-size:.86rem;font-weight:700;cursor:pointer}
+
+    /* Summary */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin-bottom:22px}
+    .kpi{background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:5px solid #ddd}
+    .kpi.inc{border-left-color:#22c55e}.kpi.exp{border-left-color:#ef4444}.kpi.sav{border-left-color:#3b82f6}.kpi.best{border-left-color:#f59e0b}
+    .kpi .lbl{font-size:.71rem;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:5px}
+    .kpi .val{font-size:1.3rem;font-weight:700}.kpi .sub{font-size:.71rem;color:#bbb;margin-top:3px}
+    .pos{color:#16a34a}.neg{color:#dc2626}
+    .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px}
+    @media(max-width:660px){.chart-row{grid-template-columns:1fr}}
+    .card{background:white;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+    .card h2{font-size:.83rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#555;margin-bottom:13px}
+
+    /* Table */
+    .tbl-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.83rem}
+    th{background:#0f3460;color:white;padding:9px 11px;text-align:right;font-weight:600;white-space:nowrap}
+    th:first-child{text-align:left;border-radius:8px 0 0 0}th:last-child{border-radius:0 8px 0 0}
+    td{padding:9px 11px;text-align:right;border-bottom:1px solid #f0f0f0;white-space:nowrap}
+    td:first-child{text-align:left;font-weight:600}
+    tr:hover td{background:#f7f9fc}
+    .total-row td{font-weight:700;background:#f0f4ff;border-top:2px solid #0f3460}
+    .tag-pos{color:#16a34a;font-weight:700}.tag-neg{color:#dc2626;font-weight:700}.empty{color:#ccc}
+
+    #toast{position:fixed;bottom:22px;right:22px;background:#0f3460;color:white;padding:11px 18px;border-radius:10px;font-size:.86rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:999}
+    #toast.show{opacity:1}
+
+    /* Credit card page */
+    .cc-month-bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+    .cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:600px){.cc-grid{grid-template-columns:1fr}}
+    .cc-box{background:white;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+    .cc-box.scb{border-top:4px solid #1a56db}
+    .cc-box.uob{border-top:4px solid #b91c1c}
+    .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .cc-title{font-size:1rem;font-weight:700}
+    .cc-title.scb{color:#1a56db}.cc-title.uob{color:#b91c1c}
+    .cc-item{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+    .cc-item input.cc-detail{flex:2;padding:6px 9px;border:1px solid #e8e8e8;border-radius:7px;font-size:.83rem;background:#fafafa}
+    .cc-item input.cc-amount{flex:1;min-width:80px;padding:6px 9px;border:1px solid #e8e8e8;border-radius:7px;font-size:.83rem;text-align:right;background:#fafafa}
+    .cc-item input:focus{outline:none;border-color:#6366f1;background:white}
+    .cc-item .cc-del{width:22px;height:22px;border:none;border-radius:5px;background:transparent;color:#ddd;font-size:.75rem;cursor:pointer;flex-shrink:0}
+    .cc-item:hover .cc-del{color:#dc2626;background:#fee2e2}
+    .cc-add{width:100%;padding:6px;border:1.5px dashed #ddd;border-radius:7px;background:transparent;font-size:.78rem;color:#bbb;cursor:pointer;margin-top:4px;transition:.2s}
+    .cc-add:hover{border-color:#6366f1;color:#6366f1}
+    .cc-summary{margin-top:12px;padding-top:12px;border-top:2px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+    .cc-summary .cc-sum-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888}
+    .cc-summary .cc-sum-val{font-size:1.15rem;font-weight:700;color:#1a1a2e}
+    .cc-save-btn{padding:10px 20px;border:none;border-radius:8px;font-size:.86rem;font-weight:700;cursor:pointer;background:#0f3460;color:white;margin-top:16px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>📊 รายรับ - รายจ่าย 2026</h1>
+  <p>กรอกข้อมูลรายเดือน แล้วดูสรุปและกราฟอัตโนมัติ</p>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('entry',this)">✏️ กรอกข้อมูล</button>
+    <button class="tab-btn" onclick="switchTab('table',this)">📋 ตารางรายเดือน</button>
+    <button class="tab-btn" onclick="switchTab('cc',this)">💳 บัตรเครดิต</button>
+  </div>
+
+  <div class="sync-bar">
+    <span class="label">📱 บันทึก/โหลด ข้ามอุปกรณ์:</span>
+    <button class="btn btn-export" style="padding:8px 15px;font-size:.8rem" onclick="exportJSON()">⬇️ Export JSON</button>
+    <label class="btn-import-label">⬆️ Import JSON
+      <input type="file" accept=".json" onchange="importJSON(event)" style="display:none"/>
+    </label>
+    <span class="hint">บันทึกลง iCloud / Google Drive แล้วโหลดในอุปกรณ์อื่น</span>
+  </div>
+
+  <!-- TAB: ENTRY -->
+  <div id="tab-entry" class="panel active">
+    <div class="month-selector" id="month-pills"></div>
+
+    <div class="form-card">
+      <h2 id="form-title">กรอกข้อมูลเดือน ม.ค. 2026</h2>
+
+      <div class="exrate">
+        💱 อัตราแลกเปลี่ยน &nbsp;
+        1 TWD = <input id="ex-twd" type="number" step="0.001" value="1"> THB &nbsp;|&nbsp;
+        1 USD = <input id="ex-usd" type="number" step="0.01" value="30"> TWD
+      </div>
+
+      <!-- FLIGHT HOURS -->
+      <div class="flight-box">
+        <div class="section-label flight">✈️ ชั่วโมงบิน (Flight Hours)</div>
+        <div class="grid4">
+          <div class="field">
+            <label>Block Hours รวม</label>
+            <input id="f-bh-hours" type="number" placeholder="เช่น 79.5" step="0.1" style="border-color:#6366f1;font-weight:700"/>
+            <div class="hint">≤70h @145฿ · 70-80h @362.5฿ · >80h @507.5฿</div>
+          </div>
+          <div class="field">
+            <label>Per Diem EUR/AME/AUS (ชม.)</label>
+            <input id="f-pd-eu" type="number" placeholder="เช่น 143.5" step="0.1"/>
+            <div class="hint">@4 USD/hr</div>
+          </div>
+          <div class="field">
+            <label>Per Diem Regions (ชม.)</label>
+            <input id="f-pd-reg" type="number" placeholder="เช่น 161.5" step="0.1"/>
+            <div class="hint">@3.5 USD/hr</div>
+          </div>
+          <div class="field">
+            <label>Transportation (ครั้ง)</label>
+            <input id="f-transport-times" type="number" placeholder="เช่น 4" step="1"/>
+            <div class="hint">ครั้งละ 700฿</div>
+          </div>
+        </div>
+        <div id="flight-calc">
+          🧮 Block Hour = <strong id="fc-bh">฿0</strong> &nbsp;|&nbsp;
+          Per Diem = <strong id="fc-pd">฿0</strong> &nbsp;|&nbsp;
+          Transport = <strong id="fc-tr">฿0</strong>
+          <button onclick="applyFlightCalc()" style="margin-left:12px;padding:4px 12px;background:#6366f1;color:white;border:none;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer">▶ ใส่ในรายรับ</button>
+        </div>
+      </div>
+
+      <!-- INCOME (dynamic) -->
+      <div class="section-label inc">💰 รายรับ</div>
+      <div class="items-box inc"><div class="items-grid" id="income-items"></div></div>
+      <button class="add-btn" onclick="addItem('income')">＋ เพิ่มรายการรายรับ</button>
+
+      <!-- EXPENSE (dynamic) -->
+      <div class="section-label exp" style="margin-top:16px">💸 รายจ่าย</div>
+      <div class="items-box exp"><div class="items-grid" id="expense-items"></div></div>
+      <button class="add-btn" onclick="addItem('expense')">＋ เพิ่มรายการรายจ่าย</button>
+
+      <!-- Preview -->
+      <div id="calc-preview" style="margin-top:14px;padding:11px 16px;background:#f8faff;border-radius:10px;font-size:.85rem;display:none">
+        รายรับสุทธิ: <strong id="prev-inc" class="pos"></strong> &nbsp;|&nbsp;
+        รายจ่าย: <strong id="prev-exp" class="neg"></strong> &nbsp;|&nbsp;
+        คงเหลือ: <strong id="prev-sav"></strong>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveMonth()">💾 บันทึกเดือนนี้</button>
+        <button class="btn btn-danger" onclick="clearMonth()">🗑️ ล้างข้อมูลเดือนนี้</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TAB: TABLE -->
+  <div id="tab-table" class="panel">
+    <div class="card">
+      <h2>ตารางสรุปรายเดือน</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>เดือน</th><th>รายรับสุทธิ (฿)</th><th>รายจ่าย (฿)</th><th>คงเหลือ (฿)</th>
+          </tr></thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: CREDIT CARD -->
+  <div id="tab-cc" class="panel">
+    <div class="cc-month-bar" id="cc-month-pills"></div>
+    <div class="cc-grid">
+
+      <!-- SCB -->
+      <div class="cc-box scb">
+        <div class="cc-header">
+          <span class="cc-title scb">💳 SCB</span>
+          <span style="font-size:.75rem;color:#aaa" id="cc-month-label">ม.ค. 2026</span>
+        </div>
+        <div id="scb-items"></div>
+        <button class="cc-add" onclick="ccAddItem('scb')">＋ เพิ่มรายการ</button>
+        <div class="cc-summary">
+          <span class="cc-sum-label">ยอดรวม SCB</span>
+          <span class="cc-sum-val" id="scb-total">฿0</span>
+        </div>
+      </div>
+
+      <!-- UOB -->
+      <div class="cc-box uob">
+        <div class="cc-header">
+          <span class="cc-title uob">💳 UOB</span>
+        </div>
+        <div id="uob-items"></div>
+        <button class="cc-add" onclick="ccAddItem('uob')">＋ เพิ่มรายการ</button>
+        <div class="cc-summary">
+          <span class="cc-sum-label">ยอดรวม UOB</span>
+          <span class="cc-sum-val" id="uob-total">฿0</span>
+        </div>
+      </div>
+
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:16px;padding:14px 18px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <button class="cc-save-btn" onclick="ccSave()">💾 บันทึกบัตรเครดิตเดือนนี้</button>
+      <span style="font-size:.82rem;color:#888">ยอดรวมทั้ง 2 บัตร: <strong id="cc-grand-total" style="color:#1a1a2e;font-size:1rem">฿0</strong></span>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+let currentMonth = 0;
+let barChart, donutChart, lineChart;
+
+// ── Default items templates ──────────────────────────────────────────────────
+const DEFAULT_INCOME = [
+  {label:'เงินเดือน Base', amount:0},
+  {label:'Block Hour', amount:0},
+  {label:'Transportation', amount:0},
+  {label:'Per Diem', amount:0},
+];
+const DEFAULT_EXPENSE = [
+  {label:'ค่าเช่าบ้าน', amount:0},
+  {label:'ค่าแม่บ้าน', amount:0},
+  {label:'ค่าผ่อน Aion', amount:0},
+  {label:'ค่าเรียน ป.โท', amount:0},
+  {label:'ค่าเทอม', amount:0},
+  {label:'บัตรเครดิต SCB', amount:0},
+  {label:'ผ่อน iPhone', amount:0},
+  {label:'บัตรเครดิต UOB', amount:0},
+  {label:'ค่าที่จอดรถ', amount:0},
+];
+
+// ── Migrate old flat format → new dynamic format ─────────────────────────────
+function migrateOld(old) {
+  if (!old || old.income) return old; // already new format
+  const income = [
+    {label:'เงินเดือน Base', amount: old.base||0},
+    {label:'Block Hour', amount: old.bhThb||0},
+    {label:'Transportation', amount: old.transport||0},
+    {label:'Per Diem', amount: old.pdThb||0},
+  ];
+  if ((old.extra||0) > 0) income.push({label:'รายรับพิเศษ', amount: old.extra});
+  const expenses = [
+    {label:'ค่าเช่าบ้าน', amount: old.rent||0},
+    {label:'ค่าแม่บ้าน', amount: old.maid||0},
+    {label:'ค่าผ่อน Aion', amount: old.aion||0},
+    {label:'ค่าเรียน ป.โท', amount: old.benz||0},
+    {label:'ค่าเทอม', amount: old.school||0},
+    {label:'บัตรเครดิต SCB', amount: old.scb||0},
+    {label:'ผ่อน iPhone', amount: old.iphone||0},
+    {label:'บัตรเครดิต UOB', amount: old.uob||0},
+    {label:'ค่าที่จอดรถ', amount: old.parking||0},
+  ];
+  if ((old.other||0) > 0) expenses.push({label:'อื่นๆ', amount: old.other});
+  return {
+    bhHours: old.bhHours||0, pdEu: old.pdEu||0, pdReg: old.pdReg||0,
+    transportTimes: old.transportTimes||0, income, expenses
+  };
+}
+
+// ── Build initial DATA from uploaded JSON ────────────────────────────────────
+const RAW_JSON = {"version":1,"year":2026,"exportedAt":"2026-06-11T14:07:08.104Z","data":[{"base":18565,"bhHours":79.46,"bhThb":13579.249999999998,"transportTimes":4,"transport":2800,"pdEu":143.5,"pdReg":161.5,"pdThb":34177.5,"extra":3000,"rent":15000,"maid":14000,"aion":8000,"benz":9000,"school":8000,"scb":10000,"iphone":1600,"uob":3000,"parking":2000,"other":0},{"base":18565,"bhHours":76.8,"bhThb":12615,"transportTimes":5,"transport":3500,"pdEu":156.35,"pdReg":129.35,"pdThb":32343.75,"extra":5000,"rent":15000,"maid":14000,"aion":8000,"benz":9000,"school":8000,"scb":10000,"iphone":1600,"uob":3000,"parking":2000,"other":0},{"base":18565,"bhHours":89.41,"bhThb":18550.574999999997,"transportTimes":4,"transport":2800,"pdEu":156,"pdReg":158,"pdThb":35310,"extra":4000,"rent":15000,"maid":14000,"aion":8000,"benz":14300,"school":8000,"scb":10000,"iphone":1600,"uob":3000,"parking":2000,"other":0},{"base":18565,"bhHours":83.6,"bhThb":15601.999999999996,"transportTimes":6,"transport":4200,"pdEu":219.4,"pdReg":91.57,"pdThb":35942.85,"extra":4000,"rent":15000,"maid":14000,"aion":8000,"benz":14300,"school":8000,"scb":10000,"iphone":1600,"uob":3000,"parking":2000,"other":0},{"base":18565,"bhHours":83.2,"bhThb":15399.000000000002,"transportTimes":4,"transport":2800,"pdEu":191.05,"pdReg":151.15,"pdThb":38796.75,"extra":0,"rent":15000,"maid":14000,"aion":8000,"benz":14300,"school":8000,"scb":10000,"iphone":1600,"uob":3000,"parking":2000,"other":0},{},{},{},{},{},{},{}]};
+
+function buildInitialData() {
+  return RAW_JSON.data.map(d => {
+    if (!d || Object.keys(d).length === 0) return null; // empty month
+    return migrateOld(d);
+  });
+}
+
+function loadData() {
+  const saved = localStorage.getItem('data2026v2');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map(d => d ? (d.income ? d : migrateOld(d)) : null);
+    } catch { }
+  }
+  return buildInitialData();
+}
+
+function saveData() { localStorage.setItem('data2026v2', JSON.stringify(DATA)); }
+let DATA = loadData();
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function hasData(i) { return DATA[i] !== null && DATA[i] !== undefined; }
+function totalIncome(d) { return d ? (d.income||[]).reduce((s,x)=>s+(+x.amount||0),0) : 0; }
+function totalExpense(d) { return d ? (d.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0) : 0; }
+function fmt(n) {
+  if (n===0||n===undefined||n===null) return '—';
+  return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function calcBH(h) {
+  if (!h) return 0;
+  return Math.min(h,70)*145 + Math.max(0,Math.min(h,80)-70)*362.5 + Math.max(0,h-80)*507.5;
+}
+
+// ── Month pills ───────────────────────────────────────────────────────────────
+function buildPills() {
+  const el = document.getElementById('month-pills');
+  el.innerHTML = '';
+  MONTHS_TH.forEach((m,i) => {
+    const b = document.createElement('button');
+    b.className = 'month-pill' + (hasData(i)?' has-data':'') + (i===currentMonth?' active':'');
+    b.textContent = m;
+    b.onclick = () => selectMonth(i);
+    el.appendChild(b);
+  });
+}
+
+function selectMonth(i) {
+  currentMonth = i;
+  buildPills();
+  document.getElementById('form-title').textContent = `กรอกข้อมูลเดือน ${MONTHS_TH[i]} 2026`;
+  renderForm(i);
+}
+
+// ── Render dynamic item rows ──────────────────────────────────────────────────
+function renderItems(type) {
+  const d = DATA[currentMonth];
+  const items = d ? (type==='income' ? d.income : d.expenses) : [];
+  const container = document.getElementById(type===  'income'?'income-items':'expense-items');
+  container.innerHTML = '';
+  (items||[]).forEach((item,idx) => addItemRow(container, item.label, item.amount, type, idx));
+  updatePreview();
+}
+
+function addItemRow(container, label, amount, type) {
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.dataset.type = type;
+  card.innerHTML = `
+    <button class="del-btn" onclick="removeItemRow(this)" title="ลบ">✕</button>
+    <input class="item-label" type="text" placeholder="ชื่อรายการ">
+    <input class="item-amount" type="number" placeholder="0">`;
+  const labelEl = card.querySelector('.item-label');
+  const amountEl = card.querySelector('.item-amount');
+  labelEl.value = label || '';
+  if (amount !== '' && amount !== null && amount !== undefined) amountEl.value = amount;
+  labelEl.addEventListener('input', updatePreview);
+  amountEl.addEventListener('input', updatePreview);
+  container.appendChild(card);
+}
+
+function addItem(type) {
+  const container = document.getElementById(type==='income'?'income-items':'expense-items');
+  addItemRow(container, '', '', type, -1);
+  // scroll into view
+  container.lastChild.querySelector('.item-label').focus();
+  updatePreview();
+}
+
+function removeItemRow(btn) {
+  btn.closest('.item-card').remove();
+  updatePreview();
+}
+
+// ── Read form ─────────────────────────────────────────────────────────────────
+function readItems(type) {
+  const container = document.getElementById(type==='income'?'income-items':'expense-items');
+  return Array.from(container.querySelectorAll('.item-card')).map(card => ({
+    label: card.querySelector('.item-label').value || '',
+    amount: parseFloat(card.querySelector('.item-amount').value) || 0,
+  }));
+}
+
+// ── Flight calc ───────────────────────────────────────────────────────────────
+function getFlightCalc() {
+  const bhH = parseFloat(document.getElementById('f-bh-hours').value)||0;
+  const pdEu = parseFloat(document.getElementById('f-pd-eu').value)||0;
+  const pdReg = parseFloat(document.getElementById('f-pd-reg').value)||0;
+  const times = parseFloat(document.getElementById('f-transport-times').value)||0;
+  const exTwd = parseFloat(document.getElementById('ex-twd').value)||1;
+  const exUsd = parseFloat(document.getElementById('ex-usd').value)||30;
+  return {
+    bhH, pdEu, pdReg, times,
+    bhThb: calcBH(bhH),
+    pdThb: (pdEu*4 + pdReg*3.5) * exUsd * exTwd,
+    transport: times * 700,
+  };
+}
+
+function updateFlightCalcDisplay() {
+  const fc = getFlightCalc();
+  const fcEl = document.getElementById('flight-calc');
+  const any = fc.bhH>0||fc.pdEu>0||fc.pdReg>0||fc.times>0;
+  fcEl.style.display = any ? 'block' : 'none';
+  document.getElementById('fc-bh').textContent = '฿'+fc.bhThb.toLocaleString('th-TH',{maximumFractionDigits:2});
+  document.getElementById('fc-pd').textContent = '฿'+fc.pdThb.toLocaleString('th-TH',{maximumFractionDigits:2});
+  document.getElementById('fc-tr').textContent = '฿'+fc.transport.toLocaleString('th-TH',{maximumFractionDigits:2});
+}
+
+function applyFlightCalc() {
+  const fc = getFlightCalc();
+  // Find and update Block Hour, Transportation, Per Diem rows in income
+  const container = document.getElementById('income-items');
+  const cards = Array.from(container.querySelectorAll('.item-card'));
+  const map = {'Block Hour': fc.bhThb, 'Transportation': fc.transport, 'Per Diem': fc.pdThb};
+  cards.forEach(card => {
+    const lbl = card.querySelector('.item-label').value;
+    if (map[lbl] !== undefined) card.querySelector('.item-amount').value = map[lbl].toFixed(2);
+  });
+  updatePreview();
+  showToast('✅ ใส่ยอดจากชั่วโมงบินแล้ว');
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+function updatePreview() {
+  updateFlightCalcDisplay();
+  const inc = readItems('income').reduce((s,x)=>s+x.amount,0);
+  const exp = readItems('expense').reduce((s,x)=>s+x.amount,0);
+  const sav = inc - exp;
+  const el = document.getElementById('calc-preview');
+  if (inc===0&&exp===0){el.style.display='none';return;}
+  el.style.display='block';
+  document.getElementById('prev-inc').textContent='฿'+fmt(inc);
+  document.getElementById('prev-exp').textContent='฿'+fmt(exp);
+  const sEl=document.getElementById('prev-sav');
+  sEl.textContent=(sav>=0?'+':'')+'฿'+fmt(sav);
+  sEl.className=sav>=0?'pos':'neg';
+}
+
+// ── Render form for a month ───────────────────────────────────────────────────
+function renderForm(i) {
+  const d = DATA[i];
+  // Flight fields
+  document.getElementById('f-bh-hours').value = d?.bhHours||'';
+  document.getElementById('f-pd-eu').value = d?.pdEu||'';
+  document.getElementById('f-pd-reg').value = d?.pdReg||'';
+  document.getElementById('f-transport-times').value = d?.transportTimes||'';
+  document.getElementById('flight-calc').style.display='none';
+
+  // Income items
+  const incContainer = document.getElementById('income-items');
+  incContainer.innerHTML='';
+  const incItems = d?.income || DEFAULT_INCOME.map(x=>({...x}));
+  incItems.forEach(item => addItemRow(incContainer, item.label, item.amount, 'income'));
+
+  // Expense items — fall back to previous month's expenses if this month is empty
+  const expContainer = document.getElementById('expense-items');
+  expContainer.innerHTML='';
+  let expItems = d?.expenses;
+  if (!expItems) {
+    // find the most recent past month that has expense data
+    let prev = null;
+    for (let p = i - 1; p >= 0; p--) {
+      if (DATA[p]?.expenses?.length) { prev = DATA[p].expenses; break; }
+    }
+    expItems = prev ? prev.map(x=>({...x})) : DEFAULT_EXPENSE.map(x=>({...x}));
+  }
+  expItems.forEach(item => addItemRow(expContainer, item.label, item.amount, 'expense'));
+
+  updatePreview();
+}
+
+// ── Save / Clear ──────────────────────────────────────────────────────────────
+function saveMonth() {
+  const fc = getFlightCalc();
+  DATA[currentMonth] = {
+    bhHours: fc.bhH, pdEu: fc.pdEu, pdReg: fc.pdReg, transportTimes: fc.times,
+    income: readItems('income'),
+    expenses: readItems('expense'),
+  };
+  saveData();
+  buildPills();
+  renderTable();
+  showToast('✅ บันทึก '+MONTHS_TH[currentMonth]+' แล้ว!');
+}
+
+function clearMonth() {
+  if (!confirm('ลบข้อมูลเดือน '+MONTHS_TH[currentMonth]+'?')) return;
+  DATA[currentMonth] = null;
+  saveData();
+  buildPills();
+  renderForm(currentMonth);
+  renderTable();
+  showToast('🗑️ ลบข้อมูลแล้ว');
+}
+
+// ── Export / Import ───────────────────────────────────────────────────────────
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({version:2,year:2026,exportedAt:new Date().toISOString(),data:DATA},null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='รายรับ-จ่าย2026.json'; a.click();
+  showToast('⬇️ Export JSON สำเร็จ!');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0]; if(!file)return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const raw = parsed.data || parsed;
+      if (!Array.isArray(raw)||raw.length!==12) throw new Error();
+      DATA = raw.map(d => {
+        if (!d||Object.keys(d).length===0) return null;
+        return d.income ? d : migrateOld(d);
+      });
+      saveData(); buildPills(); renderForm(currentMonth); renderTable();
+      showToast('⬆️ Import สำเร็จ!');
+    } catch { showToast('❌ ไฟล์ไม่ถูกต้อง'); }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function renderSummary() {
+  const totInc = DATA.reduce((s,d)=>s+totalIncome(d),0);
+  const totExp = DATA.reduce((s,d)=>s+totalExpense(d),0);
+  const totSav = totInc-totExp;
+  const filled = DATA.filter(d=>d!==null).length;
+  document.getElementById('kpi-inc').textContent='฿'+fmt(totInc);
+  document.getElementById('kpi-inc-sub').textContent=filled+' เดือนที่มีข้อมูล';
+  const sEl=document.getElementById('kpi-sav');
+  sEl.textContent=(totSav>=0?'+':'')+'฿'+fmt(totSav);
+  sEl.className='val '+(totSav>=0?'pos':'neg');
+  const bestIdx=DATA.reduce((bi,d,i,a)=>totalIncome(d)>totalIncome(a[bi])?i:bi,0);
+  document.getElementById('kpi-best').textContent=DATA[bestIdx]?MONTHS_TH[bestIdx]+' 2026':'—';
+  document.getElementById('kpi-best-sub').textContent=DATA[bestIdx]?'฿'+fmt(totalIncome(DATA[bestIdx])):'—';
+
+  const incArr=DATA.map(d=>totalIncome(d));
+  const expArr=DATA.map(d=>totalExpense(d));
+  if(barChart)barChart.destroy();
+  barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:MONTHS_TH,datasets:[
+    {label:'รายรับสุทธิ',data:incArr,backgroundColor:'rgba(34,197,94,.75)',borderRadius:4},
+    {label:'รายจ่าย',data:expArr,backgroundColor:'rgba(239,68,68,.65)',borderRadius:4}
+  ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'}}}}});
+
+  // Donut — average income breakdown across filled months
+  const filled2 = DATA.filter(d=>d!==null&&d.income);
+  if(filled2.length>0){
+    const labelSet={};
+    filled2.forEach(d=>d.income.forEach(x=>{if(x.amount>0)labelSet[x.label]=(labelSet[x.label]||0)+x.amount;}));
+    const topLabels=Object.entries(labelSet).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const colors=['#6366f1','#22c55e','#f59e0b','#3b82f6','#ec4899','#14b8a6'];
+    if(donutChart)donutChart.destroy();
+    donutChart=new Chart(document.getElementById('donutChart'),{type:'doughnut',data:{
+      labels:topLabels.map(x=>x[0]),
+      datasets:[{data:topLabels.map(x=>x[1]),backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]
+    },options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});
+  }
+
+  let running=0;
+  const runData=DATA.map(d=>{running+=totalIncome(d)-totalExpense(d);return running;});
+  if(lineChart)lineChart.destroy();
+  lineChart=new Chart(document.getElementById('lineChart'),{type:'line',data:{labels:MONTHS_TH,datasets:[{
+    label:'ยอดสะสม',data:runData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.4,pointRadius:5,
+    pointBackgroundColor:runData.map(v=>v>=0?'#22c55e':'#ef4444')
+  }]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'}}}}});
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody=document.getElementById('tbl-body');
+  let tInc=0,tExp=0,tSav=0;
+  tbody.innerHTML='';
+  DATA.forEach((d,i)=>{
+    const inc=totalIncome(d), exp=totalExpense(d), sav=inc-exp;
+    tInc+=inc; tExp+=exp; tSav+=sav;
+    const empty=d===null;
+    tbody.innerHTML+=`<tr style="${empty?'opacity:.35':''}">
+      <td>${MONTHS_TH[i]}</td>
+      <td>${inc>0?fmt(inc):'<span class="empty">—</span>'}</td>
+      <td>${exp>0?fmt(exp):'<span class="empty">—</span>'}</td>
+      <td class="${!empty?(sav>=0?'tag-pos':'tag-neg'):''}">${!empty?(sav>=0?'+':'')+fmt(sav):'<span class="empty">—</span>'}</td>
+    </tr>`;
+  });
+  tbody.innerHTML+=`<tr class="total-row"><td>รวมทั้งปี</td><td>${fmt(tInc)}</td><td>${fmt(tExp)}</td><td class="${tSav>=0?'tag-pos':'tag-neg'}">${(tSav>=0?'+':'')+fmt(tSav)}</td></tr>`;
+}
+
+function switchTab(name,btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='summary')renderSummary();
+  if(name==='table')renderTable();
+  if(name==='cc'){ccBuildPills();ccRender();}
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// listen exchange rate changes
+document.getElementById('ex-twd').addEventListener('input',updatePreview);
+document.getElementById('ex-usd').addEventListener('input',updatePreview);
+document.querySelectorAll('#f-bh-hours,#f-pd-eu,#f-pd-reg,#f-transport-times').forEach(el=>el.addEventListener('input',updatePreview));
+
+// ── CREDIT CARD ───────────────────────────────────────────────────────────────
+let ccMonth = 0;
+
+function ccLoadData() {
+  const saved = localStorage.getItem('ccData2026');
+  if (saved) try { return JSON.parse(saved); } catch {}
+  return Array(12).fill(null).map(() => ({ scb: [], uob: [] }));
+}
+function ccSaveData() { localStorage.setItem('ccData2026', JSON.stringify(CC_DATA)); }
+let CC_DATA = ccLoadData();
+
+function ccBuildPills() {
+  const el = document.getElementById('cc-month-pills');
+  el.innerHTML = '';
+  MONTHS_TH.forEach((m, i) => {
+    const b = document.createElement('button');
+    const hasCC = CC_DATA[i]?.scb?.length > 0 || CC_DATA[i]?.uob?.length > 0;
+    b.className = 'month-pill' + (hasCC ? ' has-data' : '') + (i === ccMonth ? ' active' + (hasCC ? ' has-data' : '') : '');
+    b.textContent = m;
+    b.onclick = () => { ccMonth = i; ccBuildPills(); ccRender(); };
+    el.appendChild(b);
+  });
+  document.getElementById('cc-month-label').textContent = MONTHS_TH[ccMonth] + ' 2026';
+}
+
+function ccRender() {
+  const d = CC_DATA[ccMonth] || { scb: [], uob: [] };
+  ccRenderItems('scb', d.scb);
+  ccRenderItems('uob', d.uob);
+  ccUpdateTotals();
+}
+
+function ccRenderItems(card, items) {
+  const container = document.getElementById(card + '-items');
+  container.innerHTML = '';
+  (items || []).forEach(item => ccAddRow(card, item.detail, item.amount));
+  if (!items || items.length === 0) ccAddRow(card, '', '');
+}
+
+function ccAddRow(card, detail, amount) {
+  const container = document.getElementById(card + '-items');
+  const row = document.createElement('div');
+  row.className = 'cc-item';
+  row.innerHTML = `
+    <input class="cc-detail" type="text" placeholder="รายละเอียด เช่น ค่าอาหาร">
+    <input class="cc-amount" type="number" placeholder="0">
+    <button class="cc-del" onclick="this.closest('.cc-item').remove();ccUpdateTotals()">✕</button>`;
+  row.querySelector('.cc-detail').value = detail || '';
+  const amEl = row.querySelector('.cc-amount');
+  if (amount !== '' && amount != null) amEl.value = amount;
+  amEl.addEventListener('input', ccUpdateTotals);
+  container.appendChild(row);
+}
+
+function ccAddItem(card) {
+  ccAddRow(card, '', '');
+  document.getElementById(card + '-items').lastChild.querySelector('.cc-detail').focus();
+  ccUpdateTotals();
+}
+
+function ccReadItems(card) {
+  return Array.from(document.getElementById(card + '-items').querySelectorAll('.cc-item')).map(row => ({
+    detail: row.querySelector('.cc-detail').value || '',
+    amount: parseFloat(row.querySelector('.cc-amount').value) || 0,
+  })).filter(x => x.detail || x.amount);
+}
+
+function ccUpdateTotals() {
+  const scbItems = Array.from(document.getElementById('scb-items').querySelectorAll('.cc-amount'));
+  const uobItems = Array.from(document.getElementById('uob-items').querySelectorAll('.cc-amount'));
+  const scbTotal = scbItems.reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+  const uobTotal = uobItems.reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+  document.getElementById('scb-total').textContent = '฿' + scbTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  document.getElementById('uob-total').textContent = '฿' + uobTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  document.getElementById('cc-grand-total').textContent = '฿' + (scbTotal + uobTotal).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+}
+
+function ccSave() {
+  CC_DATA[ccMonth] = { scb: ccReadItems('scb'), uob: ccReadItems('uob') };
+  ccSaveData();
+  ccBuildPills();
+  showToast('💳 บันทึกบัตรเครดิต ' + MONTHS_TH[ccMonth] + ' แล้ว!');
+}
+
+// Init
+buildPills();
+renderForm(0);
+renderTable();
+</script>
+</body>
+</html>
